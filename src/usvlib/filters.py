@@ -135,7 +135,6 @@ def drop_back(spectrograms: np.ndarray, threshold: int = 20) -> np.ndarray:
     for row in spectrograms:
         cleaned.append(np.where(row <= threshold, minima, row))
     cleaned = np.array(cleaned)
-
     return cleaned
 
 
