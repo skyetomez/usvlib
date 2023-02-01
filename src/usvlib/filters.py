@@ -9,13 +9,16 @@ import numpy as np
 from scipy.signal import medfilt2d, lfilter, butter, sosfilt
 
 
+from _annotation import *
+
+
 def bandpassButter(
-    signal: np.ndarray,
+    signal: NDArray,
     order: int = 2,
     sr: int = 384000,
     min: int = 18000,
     max: int = 100000,
-) -> np.ndarray:
+) -> NDArray:
     """
     Bandpass filter between 18kHz and 100kHz by default
     signal: numpy array
@@ -30,27 +33,27 @@ def bandpassButter(
     _signal = deepcopy(signal)
     cleaned = lfilter(b, a, _signal, axis=-1, zi=None)
 
-    return cleaned
+    return cleaned  # type: ignore
 
 
 def bandpassSOS(
-    signal: np.ndarray,
+    signal: NDArray,
     order: int = 2,
     sr: int = 384000,
     minCritfreq: int = 18000,
     maxCritfreq: int = 100000,
-) -> np.ndarray:
+) -> NDArray:
     """Applies bandpass filter to raw_buffer between 18000,100000
 
     Args:
-        signal (np.ndarray): raw_buffer of audio
+        signal (NDArray): raw_buffer of audio
         order (int, optional): roll off for the bandpass filter. Defaults to 2.
         sr (int, optional): sample rate of the aduio. Defaults to 384000.
         min (int, optional): minimum frequency bound of bandpass. Defaults to 18000.
         max (int, optional): maximum frequency bound of bandpass. Defaults to 100000.
 
     Returns:
-        np.ndarray: bandpassed audio
+        NDArray: bandpassed audio
     """
 
     assert maxCritfreq >= 0, "Upper bound for frequency must be provided"
@@ -64,15 +67,13 @@ def bandpassSOS(
         output="sos",
         fs=sr,
     )
-    print(sos.shape)
     _signal = deepcopy(signal)
-    print(_signal.shape)
     cleaned = sosfilt(sos=sos, x=_signal, zi=None)
-    print(cleaned.shape)
-    return cleaned
+
+    return cleaned  # type: ignore
 
 
-def local_median_filter(signal: np.ndarray, kernel_size: int = 5) -> np.ndarray:
+def local_median_filter(signal: NDArray, kernel_size: int = 5) -> NDArray:
     """
     we applied a Local Median Filter step,
     a method to estimate the minimum expected contrast between
@@ -89,7 +90,7 @@ def local_median_filter(signal: np.ndarray, kernel_size: int = 5) -> np.ndarray:
     return local_filt
 
 
-def drop_back2(spectrogram_list: list[np.ndarray], threshold: int = 20) -> np.ndarray:
+def drop_back2(spectrogram_list: list[NDArray], threshold: int = 20) -> NDArray:
     """
     Cleaning function replaces spectrogram points below a certain threshold.
     specs: spectrogram of audio data
@@ -118,7 +119,7 @@ def drop_back2(spectrogram_list: list[np.ndarray], threshold: int = 20) -> np.nd
     return cleaned
 
 
-def drop_back(spectrograms: np.ndarray, threshold: int = 20) -> np.ndarray:
+def drop_back(spectrogram: NDArray) -> NDArray:
     """
     Cleaning function replaces spectrogram points below a certain threshold.
     Applied to a single spectrogram
@@ -127,18 +128,17 @@ def drop_back(spectrograms: np.ndarray, threshold: int = 20) -> np.ndarray:
     returns cleaned version of original spectrogram
     """
 
-    threshold = -threshold
-    cleaned = list()
+    col_avg = np.nanmean(spectrogram, axis=1)
+    col_max = np.floor(np.max(col_avg))
 
     minima = -80
 
-    for row in spectrograms:
-        cleaned.append(np.where(row <= threshold, minima, row))
-    cleaned = np.array(cleaned)
+    cleaned = np.where(spectrogram >= col_max, spectrogram, minima)
+
     return cleaned
 
 
-def remove_empty_points(points_array: np.ndarray) -> np.ndarray:
+def remove_empty_points(points_array: NDArray) -> NDArray:
     """
     Cleaning function that removes points that were converted to minima
     """
