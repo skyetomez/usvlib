@@ -10,11 +10,12 @@ The long-term goal of this project is to decipher animal communication to better
 This library is currently being built and optimized. 
 
 TODO:
-* lazy loading of modules
-* testing of filters
 * construction of spectorgram generator object
+    * currently in progress
 * testing of scalogram generator objects
+    * writting for parallel processing 
 * general optimization of array using vectorization 
+    * need to use snakeviz or another profiler; not comptaible with our jupyterlab notebook 
 
 ## Installation
 
