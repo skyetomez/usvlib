@@ -11,7 +11,7 @@ This library is currently being built and optimized.
 
 TODO:
 * construction of spectorgram generator object
-    * currently in progress
+	* writing complete and no debugging for speed and running on cluster
 * testing of scalogram generator objects
     * writting for parallel processing 
 * general optimization of array using vectorization 
