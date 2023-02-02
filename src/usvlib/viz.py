@@ -8,7 +8,7 @@ import umap
 
 # import librosa
 from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding
-from filters import bandpassSOS, drop_back
+from .filters import bandpassSOS, drop_back
 
 
 # GENERAL EXTRACTED FEATURE VIZUALIZATION

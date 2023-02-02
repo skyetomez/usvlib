@@ -4,6 +4,7 @@ import pathlib
 
 
 import numpy as np
+import soundfile as sf
 from ssqueezepy import ssq_cwt
 
 from typing import Tuple
@@ -156,11 +157,11 @@ def get_audio(filename) -> Tuple[np.ndarray, int]:
     if ext == ".wav":
         os.chdir(parent)
         print(f"{name} found with ext {ext}")
-        buffer, sr = get_wav_audio(name)
+        buffer, sr = sf.read(file=name)
     elif ext == ".flac":
         os.chdir(parent)
         print(f"{name} found with ext {ext}")
-        buffer, sr = get_flac_audio(name)
+        buffer, sr = sf.read(file=name)
     else:
         raise NotImplementedError
 
