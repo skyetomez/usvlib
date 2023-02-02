@@ -13,21 +13,21 @@ from copy import deepcopy
 
 # from ssqueezepy import ssq_cwt, ssq_stft # This is continous and not discrete.
 
-from ._annotation import *
-from .filters import bandpassSOS, drop_back
-from .inputs import get_audio
+from _annotation import *
+from filters import bandpassSOS, drop_back
+from inputs import get_audio
 
 
-AUDIO_PATH = "/work/pi_moorman_umass_edu/rat_recordings/single"  ## should be environmental variable
-# EXPORTED_AUDIO_PATH = os.environ["AUDIO"]
+# AUDIO_PATH = "/work/pi_moorman_umass_edu/rat_recordings/single"  ## should be environmental variable
+EXPORTED_AUDIO_PATH = os.environ["AUDIO"]
 
 
 class scalogram_generator:
-    __slots__ = ("_audio_names", "_audio_path")
-    def __init__(self, _path = AUDIO_PATH) -> None:
-        self._audio_path = _path 
-        self._audio_names = list()
-    
+    __slots__ = ("audio_path", "audio_names")
+    def __init__(self, audio_path=EXPORTED_AUDIO_PATH) -> None:
+        self.audio_path=EXPORTED_AUDIO_PATH
+        self.audio_names = list()
+        
     def __str__(self) -> str:
         return "scalogram generator"
     
@@ -36,30 +36,27 @@ class scalogram_generator:
 
     @property
     def audio_path(self) -> str:
-        if not self._audio_path:
-            return "No audio path set"
-        else:
-            return self._audio_path         
+        return self.audio_path         
         
     @audio_path.setter
     def audio_path(self, path:str):
         _path = pathlib.Path(path)
         if _path.absolute().exists():
-            self._audio_path = path 
+            self.audio_path = path 
             return None
         else:
             raise NotADirectoryError
     
     @property
     def audio_names(self) -> List[str]:
-        if not self._audio_names:
-            self._audio_names = self._get_audio_names()
+        if not self.audio_names:
+            self.audio_names = self._get_audio_names()
         else:
-            return self._audio_names
+            return self.audio_names
     
     @audio_names.setter
     def audio_names(self, file_list:List[str]) -> None:
-        self._audio_names = file_list
+        self.audio_names = file_list
 
     def get_scalogram(self) -> None:
 
@@ -105,7 +102,7 @@ class scalogram_generator:
 
         return get_audio(file)
 
-    def _clean_audio(self, raw_buffer: NDArray) -> NDArray:
+    def _clean_audio(self, raw_buffer: NDArray, threshold: int) -> NDArray:
         buffer = drop_back(raw_buffer)
         return buffer
 
@@ -119,7 +116,7 @@ class scalogram_generator:
         return coeff_decomp
 
     def _get_morl_wvt_decom(self, buffer: NDArray, level: int = 5) -> NDArray:
-        coeff_decomp = cwt(data=buffer, wavelet=morlet2, widths=np.arange(1,level+1, 1))  # cmplex matrix
+        coeff_decomp = cwt(data=buffer, wavelet=morlet2, widths=level)  # cmplex matrix
         return np.flipud(coeff_decomp)
 
 
@@ -160,18 +157,16 @@ class scalogram_generator:
         fig = plt.figure(figsize=(6, 8), dpi=200)
         ax = fig.gca()
 
-        im_max = np.max(np.abs(complex_matrix))
-        im_min = -np.max(np.abs(complex_matrix))
-        
+        im_max = abs(complex_matrix).max()
+        im_min = -abs(complex_matrix).max()
         ax.imshow(
-            X=np.abs(complex_matrix),
+            X=complex_matrix,
             extent=[-1, 1, 1, level + 1],
             cmap="magma",
             aspect="auto",
             vmax=im_max,
             vmin=im_min,
         )
-        ax.set_title(label=title)
 
         plt.show()
 

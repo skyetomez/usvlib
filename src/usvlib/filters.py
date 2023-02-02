@@ -127,9 +127,9 @@ def drop_back(spectrogram: NDArray) -> NDArray:
     threshold: decible threshold default 20
     returns cleaned version of original spectrogram
     """
-
+    
     col_avg = np.nanmean(spectrogram, axis=1)
-    col_max = np.floor(np.max(col_avg))
+    col_max = np.ceil(np.max(col_avg))  # ceil to be more sensitive
 
     minima = -80
 
