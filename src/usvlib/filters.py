@@ -9,7 +9,7 @@ import numpy as np
 from scipy.signal import medfilt2d, lfilter, butter, sosfilt
 
 
-from ._annotation import *
+from ._type_annotations import *
 
 
 def bandpassButter(

@@ -4,6 +4,7 @@ import os
 import datetime
 import pickle
 
+from ._type_annotations import *
 import numpy as np
 from pickle import HIGHEST_PROTOCOL
 
@@ -12,7 +13,7 @@ from pickle import HIGHEST_PROTOCOL
 # from ..filters import drop_back
 
 
-def save_narray(file: str, data: np.ndarray, suffix: str) -> None:
+def save_narray(file: str, data: NDArray, suffix: str) -> None:
     """
     Saves an numpy array with name as file.
     NOW:
@@ -39,27 +40,6 @@ def save_narray(file: str, data: np.ndarray, suffix: str) -> None:
     else:
         np.save(file=name, arr=data, allow_pickle=True)
         return None
-
-
-def load_narray(file: str) -> np.ndarray:
-    """
-    Loads an numpy array from source: file
-    file needs to include path to file or can
-    be file if the numpy array is in the same directory
-
-    Example:
-    fpath = "example/path/to/array.npy"
-    data = load_narray(file = fpath)
-    """
-
-    try:
-        print(f"Attempting to open {file} from {pathlib.Path.cwd()}")
-        data = np.load(file=file, mmap_mode="r")
-        return data
-
-    except OSError as e:
-        print("error in loading")
-        print(e)
 
 
 # def to_pickle(var, fname: str, fpath: str) -> None:

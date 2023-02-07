@@ -5,8 +5,6 @@ import pathlib
 
 import numpy as np
 import soundfile as sf
-import multiprocessing as mp
-
 # from ssqueezepy import ssq_cwt
 
 from ._type_annotations import *
@@ -96,7 +94,9 @@ wavelet_parameters = {
 #     return Tx, Wx
 
 
-def get_stft_from_file(fname, type: str = "wav") -> Tuple[NDArray, NDArray, NDArray]:
+def get_stft_from_file(
+    fname, type: str = "wav"
+) -> Tuple[NDArray, NDArray, NDArray]:
     """
     Produces a tuple of information from an input audio path
     Handles both flacs and wav files
@@ -183,8 +183,7 @@ def get_audio(filename) -> Tuple[np.ndarray, int]:
 
     return buffer, sr
 
-
-def get_narray(file: str) -> NDArray:  # type: ignore
+def get_narray(file: str) -> NDArray: #type: ignore
     """
     Loads an numpy array from source: file
     file needs to include path to file or can
@@ -207,24 +206,20 @@ def get_narray(file: str) -> NDArray:  # type: ignore
         print(e)
 
 
-def get_cpu_count() -> int:
-    if os.environ["SRUN_CPUS_PER_TASK"]:
-        return int(os.environ["SLURM_CPUS_PER_TASK"])
+        
+        
+def get_cpu_count() -> int:        
+    cpu_count = mp.cpu_count()
 
-    else:
+    if len(os.sched_getaffinity(0)) < cpu_count:
+        try:
+            os.sched_setaffinity(0, range(cpu_count))
+        except OSError:
+            print("Could not set affinity")
 
-        cpu_count = mp.cpu_count()
-
-        if len(os.sched_getaffinity(0)) < cpu_count:
-            try:
-                os.sched_setaffinity(0, range(cpu_count))
-            except OSError:
-                print("Could not set affinity")
-
-        n = max(len(os.sched_getaffinity(0)), 96)
-        print("Using", n, "processes for the pool")
-        return n
-
+    n = max(len(os.sched_getaffinity(0)), 96)
+    print("Using", n, "processes for the pool")
+    return n
 
 if __name__ == "__main__":
 

@@ -3,7 +3,6 @@ import os
 import pathlib
 
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,7 +12,7 @@ from copy import deepcopy
 
 # from ssqueezepy import ssq_cwt, ssq_stft # This is continous and not discrete.
 
-from ._annotation import *
+from ._type_annotations import *
 from .filters import bandpassSOS, drop_back
 from .inputs import get_audio
 
@@ -51,7 +50,7 @@ class scalogram_generator:
             raise NotADirectoryError
     
     @property
-    def audio_names(self) -> List[str]:
+    def audio_names(self) -> List[str]: #type: ignore
         if not self._audio_names:
             self._audio_names = self._get_audio_names()
         else:
@@ -157,7 +156,7 @@ class scalogram_generator:
     def _get_morl_scalogram(
         self, complex_matrix: NDArray, title: str, level: int = 5
     ) -> Figure:
-        fig = plt.figure(figsize=(6, 8), dpi=200)
+        fig = plt.figure(figsize=(3, 2), dpi=200)
         ax = fig.gca()
 
         im_max = np.max(np.abs(complex_matrix))
@@ -183,7 +182,7 @@ class scalogram_generator:
         level = int(num_coeffs - 1)
         labels = []
 
-        fig = plt.figure(figsize=(6, 8), dpi=200)
+        fig = plt.figure(figsize=(3, 2), dpi=200)
         ax = fig.gca()
 
         for i, ci in enumerate(coeffs):

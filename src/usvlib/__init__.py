@@ -4,7 +4,7 @@ import lazy_loader as lazy
 
 from ._conversions import *
 from .fourier import *
-from ._annotation import *
+from ._type_annotations import *
 from .filters import *
 from .wavelets import *
 from .inputs import *
@@ -16,7 +16,7 @@ __all__ = [
     "_conversions",
     "filters",
     "preprocess",
-    "_annotation",
+    "_type_annotations",
     "inputs",
     "outputs",
     "fourier",
