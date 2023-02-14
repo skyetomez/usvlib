@@ -20,7 +20,7 @@ TODO:
 ## Installation
 
 ```setup
-pip install -r requirements.txt
+conda install --file requirements.txt
 ```
 
 ## How to Use
