@@ -208,7 +208,9 @@ def get_narray(file: str) -> NDArray:  # type: ignore
 
 
 def get_cpu_count() -> int:
-    if os.environ["SRUN_CPUS_PER_TASK"]:
+
+    if os.environ["SLURM_CPUS_PER_TASK"]:
+
         return int(os.environ["SLURM_CPUS_PER_TASK"])
 
     else:
