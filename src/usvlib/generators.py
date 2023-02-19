@@ -82,7 +82,14 @@ class scalogram_generator:
         for i in range(num_sections):
             start = i * ten_minutes
             end = start + ten_minutes
-            title = name + " " + f"min{start} to min{end}" + "discrete scalogram"
+
+            title = (
+                name
+                + " "
+                + f"mins {i* 10} to {(i* 10) + 10}"
+                + " "
+                + "discrete scalogram"
+            )
             mini_buffer = buffer[start:end]
             filtered_buffer = self._bandpass_audio(mini_buffer, sr)
             coeffs = self._get_haar_wvt_decom(filtered_buffer, title)  # haar
@@ -110,8 +117,9 @@ class scalogram_generator:
             title = (
                 name
                 + " "
-                + f"min{start} to min{end}"
-                + f"cwt{wavelet} with {lvl} levels"
+                + f"mins {i* 10} to {(i* 10) + 10}"
+                + " "
+                + f"cwt {wavelet} with {lvl} levels"
             )
             mini_buffer = buffer[start:end]
             filtered_buffer = self._bandpass_audio(mini_buffer, sr)
