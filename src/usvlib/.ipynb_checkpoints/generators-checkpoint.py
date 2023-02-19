@@ -3,17 +3,15 @@ import os
 import pathlib
 
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy.signal import cwt, morlet2
-from pywt import wavedec
+from pywt import cwt, wavedec
 from copy import deepcopy
 
 # from ssqueezepy import ssq_cwt, ssq_stft # This is continous and not discrete.
 
-from ._annotation import *
+from ._type_annotations import *
 from .filters import bandpassSOS, drop_back
 from .inputs import get_audio
 
@@ -24,13 +22,14 @@ AUDIO_PATH = "/work/pi_moorman_umass_edu/rat_recordings/single"  ## should be en
 
 class scalogram_generator:
     __slots__ = ("_audio_names", "_audio_path")
-    def __init__(self, _path = AUDIO_PATH) -> None:
-        self._audio_path = _path 
+
+    def __init__(self, _path=AUDIO_PATH) -> None:
+        self._audio_path = _path
         self._audio_names = list()
-    
+
     def __str__(self) -> str:
         return "scalogram generator"
-    
+
     def __repr__(self) -> str:
         return "scalogram generator object"
 
@@ -39,26 +38,26 @@ class scalogram_generator:
         if not self._audio_path:
             return "No audio path set"
         else:
-            return self._audio_path         
-        
+            return self._audio_path
+
     @audio_path.setter
-    def audio_path(self, path:str):
+    def audio_path(self, path: str):
         _path = pathlib.Path(path)
         if _path.absolute().exists():
-            self._audio_path = path 
+            self._audio_path = path
             return None
         else:
             raise NotADirectoryError
-    
+
     @property
-    def audio_names(self) -> List[str]:
+    def audio_names(self) -> List[str]:  # type: ignore
         if not self._audio_names:
             self._audio_names = self._get_audio_names()
         else:
             return self._audio_names
-    
+
     @audio_names.setter
-    def audio_names(self, file_list:List[str]) -> None:
+    def audio_names(self, file_list: List[str]) -> None:
         self._audio_names = file_list
 
     def get_scalogram(self) -> None:
@@ -69,14 +68,52 @@ class scalogram_generator:
             for file in files:
                 pass
 
-    def _file_process_parallel(self, file: str) -> None:
+    def discrete_file_process(self, file: str) -> None:
+        duration = 10  # minutes
+
         name = file[:-5].replace("-", "_").replace(" ", "_").lower()
         buffer, sr = self._get_audio_buffer(file)
-        filtered_buffer = self._bandpass_audio(buffer, sr)
-        coeffs = self._get_haar_wvt_decom(filtered_buffer)
-        title = name + " " + "discrete scalogram"
-        scalogram = self._get_scalogram(coeffs, title)
-        self._save(scalogram, title)
+
+        length = len(buffer)
+
+        ten_minutes = (length // sr) * 60 * duration  # seconds * minutes
+        num_sections = length // ten_minutes
+
+        for i in range(num_sections):
+            start = i * ten_minutes
+            end = start + ten_minutes
+            mini_buffer = buffer[start:end]
+            filtered_buffer = self._bandpass_audio(mini_buffer, sr)
+            coeffs = self._get_haar_wvt_decom(filtered_buffer)  # haar
+            title = name + " " + "discrete scalogram"
+            scalogram = self._get_haar_scalogram(coeffs, title)
+            self._save(scalogram, title, discrete=True)
+
+        return None
+
+    def continuous_file_process(self, file: str) -> None:
+        lvl = 101
+        wavelet = "cmor1.5-1.0"
+        duration = 10  # minutes
+
+        name = file[:-5].replace("-", "_").replace(" ", "_").lower()
+        buffer, sr = self._get_audio_buffer(file)
+
+        length = len(buffer)
+
+        ten_minutes = (length // sr) * 60 * duration  # seconds * minutes
+        num_sections = length // ten_minutes
+
+        for i in range(num_sections):
+            start = i * ten_minutes
+            end = start + ten_minutes
+            mini_buffer = buffer[start:end]
+            filtered_buffer = self._bandpass_audio(mini_buffer, sr)
+            coeffs = self._get_morl_wvt_decom(filtered_buffer, level=lvl)  # morlet
+            title = name + " " + f"cwt{wavelet} with {lvl} levels"
+            scalogram = self._get_morl_scalogram(coeffs, title)
+            self._save(scalogram, title, discrete=False)
+
         return None
 
     def _get_audio_names(self) -> List[str]:
@@ -116,27 +153,63 @@ class scalogram_generator:
         coeff_decomp = wavedec(
             buffer, wavelet="haar", mode="symmetric", level=level
         )  # returns approximation and detailed coefficients
+        save_path = pathlib.Path(os.getenv("DISCRETE")) / title
+        np.save(save_path, coeff_decomp, allow_pickle=True)
         return coeff_decomp
 
     def _get_morl_wvt_decom(self, buffer: NDArray, level: int = 5) -> NDArray:
-        coeff_decomp = cwt(data=buffer, wavelet=morlet2, widths=np.arange(1,level+1, 1))  # cmplex matrix
-        return np.flipud(coeff_decomp)
+        sample_period = 1 / 384000
+        lvl = 101
+        wavelet = "cmor1.5-1.0"
 
-
-    def _get_scalogram(self,data, title, level:int = 5) ->Figure:
+        coeffs, *_ = cwt(
+            data=buffer,
+            scales=list(range(1, lvl, 1)),
+            wavelet=wavelet,
+            sampling_period=sample_period,
+            method="fft",
+        )
+        save_path = pathlib.Path(os.getenv("CONTINUOUS")) / title
+        np.save(save_path, coeffs, allow_pickle=True)       
         
+        return np.flipud(coeffs)
+
+    def _get_scalogram(
+        self, data, title, level: int = 5, save=False
+    ) -> Figure:  # broken
+
         if isinstance(data, list):
-            return self._get_haar_scalogram(coeffs=data, title=title)
-            
-        elif isinstance(data, np.ndarray):
-            return self._get_morl_scalogram(complex_matrix=data, title=title, level =level)
+            if not save:
+                return self._get_haar_scalogram(coeffs=data, title=title)
+            else:
+                res = self._get_haar_scalogram(coeffs=data, title=title)
+                save_path = pathlib.Path(os.getenv("DISCRETE")) / title
+                np.save(save_path, res, allow_pickle=True)
+                return res
+
+        elif isinstance(data[0].dtype, "complex128"):
+            if not save:
+                return self._get_morl_scalogram(
+                    complex_matrix=data, title=title, level=level
+                )
+            else:
+                res = self._get_morl_scalogram(
+                    complex_matrix=np.flipud(data), title=title, level=level
+                )
+                save_path = pathlib.Path(os.getenv("CONTINUOUS")) / title
+                np.save(save_path, res, allow_pickle=True)
+                return res
         else:
             raise NotImplementedError
 
-    def _save(self, figure: Figure, title: str) -> None:
+    def _save(self, figure: Figure, title: str, discrete=False) -> None:
 
         # tmp_path = os.environ["SAVE_DIR"]
-        path = pathlib.Path("/work/skylerthomas_umass_edu/rat_filter/test")
+        if discrete:
+            path = pathlib.Path(os.getenv("DISCRETE"))
+        else:
+            path = pathlib.Path(os.getenv("CONTINUOUS"))
+
         # os.chdir(path)
         ext = "jpg"
         name = title + "." + ext
@@ -157,12 +230,12 @@ class scalogram_generator:
     def _get_morl_scalogram(
         self, complex_matrix: NDArray, title: str, level: int = 5
     ) -> Figure:
-        fig = plt.figure(figsize=(3, 4), dpi=200)
+        fig = plt.figure(figsize=(3, 2), dpi=200)
         ax = fig.gca()
 
         im_max = np.max(np.abs(complex_matrix))
         im_min = -np.max(np.abs(complex_matrix))
-        
+
         ax.imshow(
             X=np.abs(complex_matrix),
             extent=[-1, 1, 1, level + 1],
@@ -183,7 +256,7 @@ class scalogram_generator:
         level = int(num_coeffs - 1)
         labels = []
 
-        fig = plt.figure(figsize=(6, 8), dpi=200)
+        fig = plt.figure(figsize=(3, 2), dpi=200)
         ax = fig.gca()
 
         for i, ci in enumerate(coeffs):
@@ -209,6 +282,3 @@ class scalogram_generator:
         plt.show()
 
         return fig
-    
-    
-    
