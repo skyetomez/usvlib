@@ -207,6 +207,30 @@ def get_narray(file: str) -> NDArray:  # type: ignore
         print(e)
 
 
+def unpickle(file: str) -> NDArray:  # type: ignore
+    """
+    Loads an numpy array from source: file
+    file needs to include path to file or can
+    be file if the numpy array is in the same directory
+
+    Example:
+    fpath = "example/path/to/array.npy"
+    data = load_narray(file = fpath)
+    """
+
+    print(f"Attempting to open {file} from {pathlib.Path.cwd()}")
+
+    try:
+        with open(file, mode="rb") as jar:
+            data = pickle5.load(jar)
+            print(f"done!{file} was succesfully loaded")
+        return data
+
+    except OSError as e:
+        print("error in loading")
+        print(e)
+
+
 def get_cpu_count() -> int:
 
     if os.environ["SLURM_CPUS_PER_TASK"]:
