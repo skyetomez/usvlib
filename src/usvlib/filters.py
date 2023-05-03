@@ -127,7 +127,7 @@ def drop_back(spectrogram: NDArray) -> NDArray:
     threshold: decible threshold default 20
     returns cleaned version of original spectrogram
     """
-    
+
     col_avg = np.nanmean(spectrogram, axis=1)
     col_max = np.ceil(np.max(col_avg))  # ceil to be more sensitive
 
@@ -144,7 +144,10 @@ def remove_empty_points(points_array: NDArray) -> NDArray:
     """
 
     # make list
-    points_list = points_array.tolist()
+    if isinstance(points_array, NpzFile):
+        points_list = points_array["arr_0"].tolist()
+    else:
+        points_list = points_array.tolist()
 
     # find elements with rows of only -80
     for index, point in enumerate(points_list):
