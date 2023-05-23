@@ -96,7 +96,7 @@ wavelet_parameters = {
 #     return Tx, Wx
 
 
-def get_stft_from_file(fname, type: str = "wav") -> Tuple[NDArray, NDArray, NDArray]:
+def get_stft_from_file(fname) -> Tuple[NDArray, NDArray, NDArray]:
     """
     Produces a tuple of information from an input audio path
     Handles both flacs and wav files
@@ -108,16 +108,7 @@ def get_stft_from_file(fname, type: str = "wav") -> Tuple[NDArray, NDArray, NDAr
 
     """
 
-    assert isinstance(fname, str), "Must be of type string"
-
-    if type == "wav":
-        raw_buffer, sample_rate = get_wav_audio(fname)
-
-    elif type == "flac":
-        raw_buffer, sample_rate = get_flac_audio(fname)
-
-    else:
-        raise TypeError
+    raw_buffer, sample_rate = sf.read(fname)
 
     frequencies, time_seg, Zxx = stft(
         x=raw_buffer,

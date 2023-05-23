@@ -61,7 +61,6 @@ class scalogram_generator:
         self._audio_names = file_list
 
     def get_scalogram(self) -> None:
-
         self._get_audio_names()
 
         for _, _, files in os.walk(top=self.audio_path, topdown=True):
@@ -177,7 +176,7 @@ class scalogram_generator:
         return coeff_decomp
 
     def _get_morl_wvt_decom(
-        self, buffer: NDArray, title: str, level: int = 101
+        self, buffer: NDArray, title: str, level: int = 101, save_arrays: bool = False
     ) -> NDArray:
         sample_period = 1 / 384000
         wavelet = "cmor1.5-1.0"
@@ -190,15 +189,15 @@ class scalogram_generator:
             method="fft",
         )
 
-        save_path = pathlib.Path(os.getenv("CONTINUOUS")) / title
-        np.save(file=save_path, arr=np.array(coeffs), allow_pickle=True)
+        if save_arrays:
+            save_path = pathlib.Path(os.getenv("CONTINUOUS")) / title
+            # np.save(file=save_path, arr=np.array(coeffs), allow_pickle=True)
 
         return np.flipud(coeffs)
 
     def _get_scalogram(
         self, data, title, level: int = 5, save=False
     ) -> Figure:  # broken
-
         if isinstance(data, list):
             if not save:
                 return self._get_haar_scalogram(coeffs=data, title=title)
@@ -224,7 +223,6 @@ class scalogram_generator:
             raise NotImplementedError
 
     def _save(self, figure: Figure, title: str, discrete=False) -> None:
-
         # tmp_path = os.environ["SAVE_DIR"]
         if discrete:
             path = pathlib.Path(os.getenv("DISCRETE"))
@@ -232,7 +230,7 @@ class scalogram_generator:
             path = pathlib.Path(os.getenv("CONTINUOUS"))
 
         # os.chdir(path)
-        ext = "jpg"
+        ext = "png"
         name = title + "." + ext
         save_path = path / name
 
@@ -240,7 +238,8 @@ class scalogram_generator:
             fname=save_path.as_posix(),
             dpi="figure",
             format=ext,
-            pad_inches=0.1,
+            bbox_inches="tight",
+            pad_inches=0,
             facecolor="auto",
             edgecolor="auto",
             orientation="landscape",
@@ -249,9 +248,13 @@ class scalogram_generator:
         return None
 
     def _get_morl_scalogram(
-        self, complex_matrix: NDArray, title: str, level: int = 5
+        self,
+        complex_matrix: NDArray,
+        title: str,
+        level: int = 5,
+        plotting: bool = False,
     ) -> Figure:
-        fig = plt.figure(figsize=(4, 3), dpi=200)
+        fig = plt.figure(figsize=(4, 3), dpi=200, frameon=False, layout="tight")
         ax = fig.gca()
 
         im_max = np.max(np.abs(complex_matrix))
@@ -264,15 +267,16 @@ class scalogram_generator:
             aspect="auto",
             vmax=im_max,
             vmin=im_min,
+            interpolation="bilinear",
         )
-        ax.set_title(label=title, fontsize=11)
+        ax.set_axis_off()
 
-        plt.show()
+        if plotting:
+            plt.show()
 
         return fig
 
     def _get_haar_scalogram(self, coeffs: List[NDArray], title: str) -> Figure:
-
         num_coeffs = len(coeffs)
         level = int(num_coeffs - 1)
         labels = []
@@ -300,6 +304,6 @@ class scalogram_generator:
         # optionally relabel the y-axis (the given labeling is 1,2,3,...)
         plt.yticks(range(1, num_coeffs + 1), labels)
 
-        plt.show()
+        # plt.show()
 
         return fig

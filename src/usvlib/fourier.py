@@ -3,6 +3,7 @@ import sys
 import pathlib
 
 import numpy as np
+from numpy.typing import NDArray
 
 from typing import Tuple
 from scipy.io import wavfile  # loading wavefiles as sample rate and bits(?)
@@ -78,33 +79,28 @@ def gen_spectrogram(
 
 
 def gen_spectrogram_local(
-    fname: str, sample_rate: int = 384000, time_res: int = 20, band_pass: bool = True
-) -> np.ndarray:
+    fname: str,
+    sample_rate: int = 384000,
+    roll_off: int = 2,
+    crits: Tuple[int, int] = (18_000, 100_000),
+    time_res: int = 20,
+    band_pass: bool = True,
+) -> Tuple[NDArray, NDArray, NDArray]:
     """
     TODO create custom stft function because In previous iterations,
     so that one is always available with default settings.
-
-    Can take file name but
-    Looks for environmental variable to either AUDIO directory of the audios or
-    WORK directory where it look for the audio file starting at the WORK root.
-    If neitehr are available, it will look in the current directory.
     """
     # constants
-    path = pathlib.Path(fname)
-    path = path.absolute().parent
-    os.chdir(path)
-    print(f"CWD is {path}")
+    f, t, cmplxfft = get_stft_from_file(fname)  # might need to change
 
-    _, _, cmplxfft = get_stft_from_file(fname)  # might need to change
-    realfft = np.abs(cmplxfft)
-    print("real fft computed")
     if band_pass:
-        filtered = bandpassSOS(realfft, sr=sample_rate)
-        power_spec = np.log(filtered)
-        return power_spec
+        filtered = bandpassSOS(cmplxfft, sr=sample_rate, order=roll_off)
+        realfft = np.power(np.abs(filtered), 2)
+        print("real fft computed")
+        return f, t, realfft
     else:
-        power_spec = np.log(realfft)
-        return power_spec
+        power_spec = np.power(np.abs(cmplxfft), 2)
+        return f, t, power_spec
 
 
 def sep_spec_by_time(audio, window_size: int = 20):

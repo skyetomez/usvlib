@@ -128,36 +128,37 @@ def drop_back(spectrogram: NDArray) -> NDArray:
     returns cleaned version of original spectrogram
     """
 
-    col_avg = np.nanmean(spectrogram, axis=1)
+    col_avg = np.nanmean(spectrogram, axis=0)
     col_max = np.ceil(np.max(col_avg))  # ceil to be more sensitive
 
     minima = -80
 
-    cleaned = np.where(spectrogram >= col_max, spectrogram, minima)
+    cleaned = np.where(spectrogram.T >= col_max, spectrogram.T, minima)
 
-    return cleaned
+    return cleaned.T
 
 
-def remove_empty_points(points_array: NDArray) -> NDArray:
+def remove_empty_points(
+    points_array: NDArray, time_arr: NDArray
+) -> Tuple[NDArray, NDArray]:
     """
     Cleaning function that removes points that were converted to minima
+
+    Returns compressed spectrogram and time array
     """
 
     # make list
     if isinstance(points_array, NpzFile):
-        points_list = points_array["arr_0"].tolist()
+        arr = points_array["arr_0"]
     else:
-        points_list = points_array.tolist()
+        arr = points_array
 
     # find elements with rows of only -80
-    for index, point in enumerate(points_list):
-        # if row only has -80 values
-        drop_test = all(point)
-        if drop_test:
-            del points_list[index]
-        else:
-            pass
+    indices = list()
+    count = 0
+    for idx, point in enumerate(arr.T):
+        # if col only has -80 values
+        if np.equal(point, -80).all():
+            indices.append(idx)
 
-    points_list = np.array(points_list)
-
-    return points_list
+    return np.delete(arr, indices, axis=1), np.delete(time_arr, indices, axis=-1)
