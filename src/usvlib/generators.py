@@ -12,7 +12,8 @@ from copy import deepcopy
 # from ssqueezepy import ssq_cwt, ssq_stft # This is continous and not discrete.
 
 from ._type_annotations import *
-from .filters import bandpassSOS, drop_back
+from .filters import bandpassSOS, drop_back, local_median_filter, remove_empty_points
+from .fourier import gen_spectrogram_local
 from .inputs import get_audio
 
 
@@ -107,7 +108,7 @@ class scalogram_generator:
 
         length = len(buffer)
 
-        ten_minutes = (length // sr) * 60 * duration  # seconds * minutes
+        ten_minutes = (length // sr *  60) * duration  # seconds * minutes
         num_sections = length // ten_minutes
 
         for i in range(num_sections):
@@ -153,10 +154,6 @@ class scalogram_generator:
         """
 
         return get_audio(file)
-
-    def _clean_audio(self, raw_buffer: NDArray) -> NDArray:
-        buffer = drop_back(raw_buffer)
-        return buffer
 
     def _bandpass_audio(self, raw_buffer: NDArray, sample_rate: int) -> NDArray:
         return bandpassSOS(signal=raw_buffer, sr=sample_rate)
@@ -257,18 +254,7 @@ class scalogram_generator:
         fig = plt.figure(figsize=(4, 3), dpi=200, frameon=False, layout="tight")
         ax = fig.gca()
 
-        im_max = np.max(np.abs(complex_matrix))
-        im_min = -np.max(np.abs(complex_matrix))
-
-        ax.imshow(
-            X=np.abs(complex_matrix),
-            extent=[-1, 1, 1, level + 1],
-            cmap="magma",
-            aspect="auto",
-            vmax=im_max,
-            vmin=im_min,
-            interpolation="bilinear",
-        )
+         
         ax.set_axis_off()
 
         if plotting:
@@ -276,12 +262,14 @@ class scalogram_generator:
 
         return fig
 
-    def _get_haar_scalogram(self, coeffs: List[NDArray], title: str) -> Figure:
+    def _get_haar_scalogram(
+        self, coeffs: List[NDArray], title: str, plotting: bool = False
+    ) -> Figure:
         num_coeffs = len(coeffs)
         level = int(num_coeffs - 1)
         labels = []
 
-        fig = plt.figure(figsize=(4, 3), dpi=200)
+        fig = plt.figure(figsize=(4, 3), dpi=200, frameon=False, layout="tight")
         ax = fig.gca()
 
         for i, ci in enumerate(coeffs):
@@ -297,13 +285,47 @@ class scalogram_generator:
         labels.insert(0, f"A{level}")
         labels.pop()
 
-        ax.set_ylim(
-            0.5, num_coeffs + 0.5
-        )  # set the y-lim to include the six horizontal images
-        ax.set_title(label=title, fontsize=11)
-        # optionally relabel the y-axis (the given labeling is 1,2,3,...)
-        plt.yticks(range(1, num_coeffs + 1), labels)
+        # ax.set_ylim(
+        #     0.5, num_coeffs + 0.5
+        # )  # set the y-lim to include the six horizontal images
+        # ax.set_title(label=title, fontsize=11)
+        # # optionally relabel the y-axis (the given labeling is 1,2,3,...)
+        # plt.yticks(range(1, num_coeffs + 1), labels)
 
-        # plt.show()
+        ax.set_axis_off()
+        if plotting:
+            plt.show()
 
         return fig
+
+
+class audio_processor:
+    def __init__(self) -> None:
+        return None
+
+    def process_audio(self, fname) -> Tuple[NDArray, NDArray, NDArray]:
+        f, t, spec = gen_spectrogram_local(fname, roll_off=7, crits=(19_500, 80_500))
+        spec[25:31, :] = -1  # needed for manual removal of noise band
+        spec[0:14, :] = -1  # needed for manual removal of noise band
+        dark = drop_back(np.log10(spec))
+        med_filt = local_median_filter(dark, 5)
+        drop, t = remove_empty_points(med_filt, t)
+        return f, t, drop
+
+    def save(
+        self,
+        savedir,
+        fname: str,
+        array: NDArray,
+        time_array: NDArray,
+        freq_array: NDArray,
+    ) -> None:
+        sd = pathlib.Path(savedir) / fname
+        with open(sd, "wb") as npz:
+            np.savez_compressed(
+                file=npz,
+                specgram=array,
+                time_array=time_array,
+                freq_array=freq_array,
+            )
+        return None

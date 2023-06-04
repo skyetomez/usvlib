@@ -155,7 +155,7 @@ def remove_empty_points(
 
     # find elements with rows of only -80
     indices = list()
-    count = 0
+
     for idx, point in enumerate(arr.T):
         # if col only has -80 values
         if np.equal(point, -80).all():
