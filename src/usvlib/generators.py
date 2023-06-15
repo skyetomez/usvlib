@@ -108,7 +108,7 @@ class scalogram_generator:
 
         length = len(buffer)
 
-        ten_minutes = (length // sr *  60) * duration  # seconds * minutes
+        ten_minutes = (length // sr * 60) * duration  # seconds * minutes
         num_sections = length // ten_minutes
 
         for i in range(num_sections):
@@ -161,16 +161,27 @@ class scalogram_generator:
     def _get_haar_wvt_decom(
         self, buffer: NDArray, title: str, level: int = 5
     ) -> List[NDArray]:
-        coeff_decomp = wavedec(
-            buffer, wavelet="haar", mode="symmetric", level=level
-        )  # returns approximation and detailed coefficients
+        coeffs = wavedec(buffer, wavelet="haar", mode="symmetric") 
+        # returns approximation and detailed coefficients
+        # Need to normalize energy per level
+
+        scaling_factor = np.arange(1, len(coeffs), 1)
+        scaling_factor = np.sqrt(1 / scaling_factor)
+        scaling_factor = np.hstack([np.ones(1), scaling_factor])
+        
+        
+        for idx, scale in enumerate(coeffs):
+            coeffs[idx] = np.abs(coeffs[idx] * scale) ** 2
+            coeffs[idx] = 10 * np.log10(coeffs[idx], where=coeffs[idx]>0)
+        
+        coeffs = coeffs[::-1]
 
         save_path = pathlib.Path(os.getenv("DISCRETE")) / title
         # PICKLE
         np.save(
-            file=save_path.as_posix(), arr=np.array(coeff_decomp), allow_pickle=True
+            file=save_path.as_posix(), arr=np.array(coeffs), allow_pickle=True
         )
-        return coeff_decomp
+        return coeffs
 
     def _get_morl_wvt_decom(
         self, buffer: NDArray, title: str, level: int = 101, save_arrays: bool = False
@@ -254,7 +265,6 @@ class scalogram_generator:
         fig = plt.figure(figsize=(4, 3), dpi=200, frameon=False, layout="tight")
         ax = fig.gca()
 
-         
         ax.set_axis_off()
 
         if plotting:
@@ -272,22 +282,25 @@ class scalogram_generator:
         fig = plt.figure(figsize=(4, 3), dpi=200, frameon=False, layout="tight")
         ax = fig.gca()
 
+
+
+
         for i, ci in enumerate(coeffs):
             ax.imshow(
                 ci.reshape(1, -1),
                 extent=[0, 1000, i + 0.5, i + 1.5],
                 cmap="inferno",
                 aspect="auto",
-                interpolation="nearest",
+                interpolation="bilinear",
             )
-            labels.append(f"D{level -i}")
+        # labels.append(f"D{level -i}")
 
-        labels.insert(0, f"A{level}")
-        labels.pop()
+        # labels.insert(0, f"A{level}")
+        # labels.pop()
 
-        # ax.set_ylim(
-        #     0.5, num_coeffs + 0.5
-        # )  # set the y-lim to include the six horizontal images
+        ax.set_ylim(
+            0.5, num_coeffs + 0.5
+        )  # set the y-lim to include the six horizontal images
         # ax.set_title(label=title, fontsize=11)
         # # optionally relabel the y-axis (the given labeling is 1,2,3,...)
         # plt.yticks(range(1, num_coeffs + 1), labels)
